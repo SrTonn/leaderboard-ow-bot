@@ -1,6 +1,8 @@
-require('dotenv').config()
+import 'dotenv/config'
 import { Context, Telegraf } from 'telegraf'
-import { create, getData, remove } from './database/index'
+import { create, getData, remove } from './src/database/index'
+import http from "serverless-http";
+import TelegramBot from 'node-telegram-bot-api';
 
 // default to port 3000 if PORT is not set
 const port = Number(process.env.PORT) || 3000;
@@ -51,7 +53,11 @@ bot.use(async (ctx, next) => {
 })
 
 bot.start(async (ctx, next)  => {
-  await ctx.reply(startMessage);
+  const firstName = ctx.message.from.first_name;
+  const chat = await bot.telegram.getChat(groupId) as TelegramBot.Chat
+
+  await ctx.reply(startMessage.replace("{userName}", firstName).replace("{groupName}", chat.title!));
+  next()
 });
 
 const checkBattleTagFormat = (battleTag: string) => {
@@ -59,13 +65,13 @@ const checkBattleTagFormat = (battleTag: string) => {
   return regex.test(battleTag);
 }
 
-bot.command('add', async (ctx) => {
+bot.command('add', async (ctx, next) => {
   const userId = ctx.chat?.id!
   const battleTag = ctx.message.text.split(" ")[1];
   const isBattleTagCorrectFormat = checkBattleTagFormat(battleTag);
 
   if(!isBattleTagCorrectFormat) {
-    await ctx.reply(`O formato da battletag me parece incorreto, eu deveria ter recebido algo no formato "nick#1234", porém recebi ${battleTag}`);
+    await ctx.reply(`O formato da battletag me parece incorreto, eu deveria ter recebido algo no formato "nick#1234", porém recebi "${battleTag}"`);
     return;
   }
 
@@ -76,30 +82,35 @@ bot.command('add', async (ctx) => {
     error: null
   }]
 
-  const userExists = await getData(battleTag, userId)
-  console.log(userExists)
-  if(userExists.data?.length! > 0) return ctx.reply('A battletag informada já consta em nossa base de dados, caso queira remover use o comando /remove')
+  const allBattleTagsByUserId = await getData(userId)
 
+  const userExists = allBattleTagsByUserId.data?.findIndex((obj) => obj.battle_tag === battleTag) !== -1
+  if(userExists) return ctx.reply('A battletag informada já consta em nossa base de dados, caso queira remover use o comando /remove')
+
+  const accountsLimit = (allBattleTagsByUserId.data?.length ?? 0) > 3
+  if(accountsLimit) return ctx.reply('Número limite de contas registradas atingido!')
   const response = await create(userData)
-  console.log(response)
-
-
 
   if(response.status != 201) return ctx.reply('Ops, acho que não consigo fazer isso no momento, tente mais tarde.')
   const link = 'https://overwatch.blizzard.com/en-us/career/' + battleTag.replace('#', '-')
   ctx.reply(`A battletag ${battleTag} foi adicionada. Segue o link de onde extraíremos os dados. link ${link}`)
-
+  next()
 })
-bot.command('remove', async (ctx) => {
+bot.command('remove', async (ctx, next) => {
   const userId = ctx.chat?.id!
   const battleTag = ctx.message.text.split(" ")[1];
 
-  const response = await remove(battleTag, userId);
-  console.log('resposta: ', response)
+  await remove(battleTag, userId);
+  ctx.reply(`Conta removida`)
+  next()
 })
 
-bot.launch()
+
+// bot.launch() //comment this line when deploy serverless
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
+
+// setup webhook
+export const echobot = http(bot.webhookCallback("/telegraf"));

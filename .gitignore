@@ -1,3 +1,20 @@
+# package directories
 node_modules
+
+# Serverless directories
+.serverless
+
+# compiled JS if any
+echo.js
+
+# secrets
 .env
+
+/build
 package-lock.json
+.env.production
+
+.env*
+.flaskenv*
+!.env.project
+!.env.vault

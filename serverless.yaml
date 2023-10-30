@@ -1,0 +1,36 @@
+org: srtonn
+app: leaderboard-ow-bot
+service: "aws"
+frameworkVersion: "3"
+
+useDotenv: true
+
+package: {
+	excludeDevDependencies: true
+}
+
+provider: {
+	name: "aws",
+	runtime: "nodejs18.x",
+	region: sa-east-1
+}
+
+plugins: [
+	"serverless-plugin-typescript",
+	"serverless-dotenv-plugin"
+]
+
+functions: {
+	echo: {
+		name: "leaderboard-ow-bot-aws",
+		handler: "echo.echobot",
+		events: [
+			{
+				httpApi: {
+					path: "/telegraf",
+					method: "post",
+				},
+			},
+		],
+	},
+}

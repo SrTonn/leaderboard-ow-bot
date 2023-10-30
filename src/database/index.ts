@@ -10,18 +10,15 @@ const supabase = createClient(projectUrl, supabaseKey);
 
 const tableName = 'BATTLETAG_TABLE';
 
-const getData = async (battleTag: string, userId: number) => supabase
+const getData = async (userId: number) => supabase
   .from(tableName)
   .select('*')
-  .eq('battle_tag', battleTag)
   .eq('telegram_profile_id', userId);
 
 const create = async (obj: any) => supabase
   .from(tableName)
   .insert(obj)
   .select();
-
-
 
 const remove = (battleTag: string, userId: number) => supabase
   .from(tableName)

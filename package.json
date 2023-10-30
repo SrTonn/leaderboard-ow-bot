@@ -1,12 +1,17 @@
 {
   "name": "leaderboard-ow-bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "AWS Lambda example for Telegraf",
+  "main": "echo.js",
+  "type": "module",
   "scripts": {
-    "start": "npx tsc && node src/index",
-    "dev": "npx nodemon ./src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npx tsc && node ./build/echo",
+    "dev": "npx nodemon ./echo.ts",
+    "serverless": "serverless",
+    "release": "serverless deploy",
+    "purge": "serverless remove",
+    "set-webhook": "telegraf -m setWebhook",
+    "start:webhook": "dotenv -- cross-var curl --request POST --url https://api.telegram.org/bot$BOT_TOKEN/setWebhook --header 'content-type: application/json' --data '{\"url\": \"$SERVERLESS_URL\"}'"
   },
   "keywords": [],
   "author": "",
@@ -14,12 +19,19 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.23.0",
     "dotenv": "^16.3.1",
-    "telegraf": "^4.15.0",
-    "typescript": "^5.2.2"
+    "serverless-http": "^3.1.1",
+    "telegraf": "^4.15.0"
   },
   "devDependencies": {
     "@types/node": "^20.8.9",
+    "@types/node-telegram-bot-api": "^0.61.11",
+    "cross-var": "^1.1.0",
+    "dotenv-cli": "^7.3.0",
     "nodemon": "^3.0.1",
-    "ts-node": "^10.9.1"
+    "serverless": "^3.28.1",
+    "serverless-dotenv-plugin": "^4.0.2",
+    "serverless-plugin-typescript": "^2.1.4",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
   }
 }
