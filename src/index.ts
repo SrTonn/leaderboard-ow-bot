@@ -1,18 +1,20 @@
 import 'dotenv/config'
 import { Context, Telegraf } from 'telegraf'
-import { create, getData, remove } from './src/database/index'
-import http from "serverless-http";
+import { create, getData, remove } from './database/index'
 import TelegramBot from 'node-telegram-bot-api';
+import { callbackQuery } from "telegraf/filters";
+
+const { DEVELOPMENT, BOT_TOKEN, WEBHOOK_DOMAIN, GROUP_OVERWATCH_BR_ID: groupId } = process.env;
 
 // default to port 3000 if PORT is not set
 const port = Number(process.env.PORT) || 3000;
-const groupId = process.env.GROUP_OVERWATCH_BR_ID!;
 
 // assert and refuse to start bot if token or webhookDomain is not passed
-if (!process.env.BOT_TOKEN) throw new Error('"BOT_TOKEN" env var is required!');
-if (!process.env.WEBHOOK_DOMAIN) throw new Error('"WEBHOOK_DOMAIN" env var is required!');
+if (!BOT_TOKEN) throw new Error('"BOT_TOKEN" env var is required!');
+if (DEVELOPMENT !== "local" && !WEBHOOK_DOMAIN) throw new Error('"WEBHOOK_DOMAIN" env var is required!');
+if (!groupId) throw new Error('"groupId" env var is required!');
 
-const bot = new Telegraf(process.env.BOT_TOKEN)
+const bot = new Telegraf(BOT_TOKEN)
 
 const checkIfIsMember = async (ctx: Context) => {
   const userId = ctx.chat?.id!
@@ -33,7 +35,7 @@ Exemplo de comando para adicionar battletag à lista:
 /add SrTonn#11540
 
 Exemplo de comando para remover a sua battletag da lista:
-/remove SrTonn#11540
+/remove
 
 Todos jogadores tem battletag, no PC os jogadores recebem ao criar a conta, nos consoles, devem vincular através da battlenet.
 
@@ -87,30 +89,68 @@ bot.command('add', async (ctx, next) => {
   const userExists = allBattleTagsByUserId.data?.findIndex((obj) => obj.battle_tag === battleTag) !== -1
   if(userExists) return ctx.reply('A battletag informada já consta em nossa base de dados, caso queira remover use o comando /remove')
 
-  const accountsLimit = (allBattleTagsByUserId.data?.length ?? 0) > 3
+  const accountsLimit = (allBattleTagsByUserId.data?.length ?? 0) >= 3
   if(accountsLimit) return ctx.reply('Número limite de contas registradas atingido!')
+  
   const response = await create(userData)
-
   if(response.status != 201) return ctx.reply('Ops, acho que não consigo fazer isso no momento, tente mais tarde.')
+  
   const link = 'https://overwatch.blizzard.com/en-us/career/' + battleTag.replace('#', '-')
   ctx.reply(`A battletag ${battleTag} foi adicionada. Segue o link de onde extraíremos os dados. link ${link}`)
   next()
 })
 bot.command('remove', async (ctx, next) => {
-  const userId = ctx.chat?.id!
+  const userId = ctx.chat?.id
   const battleTag = ctx.message.text.split(" ")[1];
 
+  const {data} = await getData(userId);
   await remove(battleTag, userId);
-  ctx.reply(`Conta removida`)
+
+  if((data?.length ?? 0) < 1) return ctx.reply("Você não tem conta registrada!");
+
+  await ctx.reply("Selecione a conta ao qual deseja remover.", {
+    reply_markup: {
+    inline_keyboard: [
+      data!.map(({battle_tag: battleTag}: {battle_tag: string}) => ({text: battleTag, callback_data: `delete_${battleTag}`}))
+    ]
+  }})
+
   next()
 })
 
+bot.on(callbackQuery("data"), async ctx => {
+  const chatId = ctx.chat?.id
+  const fromUserId = ctx.callbackQuery.from.id
+  const callbackData = ctx.callbackQuery.data
 
-// bot.launch() //comment this line when deploy serverless
+  if(chatId !== fromUserId) ctx.reply("Essas contas não são suas")
+
+  const battleTag = callbackData.split("_")[1]
+
+  const response = await remove(battleTag, fromUserId);
+  console.log(response)
+  ctx.answerCbQuery("Conta removida!")
+})
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))
 
 // setup webhook
-export const echobot = http(bot.webhookCallback("/telegraf"));
+// Start webhook via launch method (preferred)
+let webhook: any;
+if(DEVELOPMENT !== "local") webhook = { webhook: { domain: WEBHOOK_DOMAIN, port: port } }
+
+bot
+	.launch(webhook)
+	.then(() => console.log("Webhook bot listening on port", port));
+
+
+// export const handler = async (event) => {
+//   // TODO implement
+//   const response = {
+//     statusCode: 200,
+//     body: JSON.stringify('Hello from Lambda!'),
+//   };
+//   return response;
+// };
