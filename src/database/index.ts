@@ -9,6 +9,11 @@ const tableName = process.env.SUPABASE_TABLE!;
 
 const supabase = createClient(projectUrl, supabaseKey);
 
+supabase.auth.signInWithPassword({
+  email: process.env.SUPABASE_EMAIL!,
+  password: process.env.SUPABASE_PASSWORD!,
+})
+
 const getData = async (userId: number) => supabase
   .from(tableName)
   .select('*')

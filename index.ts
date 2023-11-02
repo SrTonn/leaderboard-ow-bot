@@ -106,9 +106,10 @@ bot.command('remove', async (ctx, next) => {
   const userId = ctx.chat?.id
   const battleTag = ctx.message.text.split(" ")[1];
 
-  const {data} = await getData(userId);
+  const {data, error} = await getData(userId);
+  console.log(error)
   if((data?.length ?? 0) < 1) return ctx.reply("Você não tem conta registrada!");
-  
+
   const isCorrectBattletag = data?.indexOf((obj: any) => obj.battle_tag === battleTag) !== -1;
   if(battleTag && isCorrectBattletag) {
     await remove(battleTag, userId);
