@@ -4,9 +4,12 @@
   "description": "AWS Lambda example for Telegraf",
   "main": "index.js",
   "scripts": {
-    "start": "npx tsc && node ./build/src/index",
-    "dev": "npx nodemon ./src/index.ts"
-
+    "start": "npx tsc && node ./build/index",
+    "dev": "npx nodemon ./index.ts",
+    "build:zip": "npx tsc --outDir nodejs && zip -r nodejs.zip nodejs",
+    "prebuild": "rm -rf dist",
+    "build": "npm run prebuild && esbuild index.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/index.js && npm run postbuild",
+    "postbuild": "cd dist && zip -r index.zip index.js*"
   },
   "keywords": [],
   "author": "",
@@ -14,14 +17,16 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.23.0",
     "dotenv": "^16.3.1",
-    "serverless-http": "^3.1.1",
     "telegraf": "^4.15.0"
   },
   "devDependencies": {
+    "@telegraf/types": "^6.9.1",
+    "@types/aws-lambda": "^8.10.125",
     "@types/node": "^20.8.9",
-    "@types/node-telegram-bot-api": "^0.61.11",
+    "@types/node-telegram-bot-api": "^0.63.0",
     "cross-var": "^1.1.0",
     "dotenv-cli": "^7.3.0",
+    "esbuild": "^0.19.5",
     "nodemon": "^3.0.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"

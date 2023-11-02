@@ -5,10 +5,9 @@ dotenv.config();
 
 const projectUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_ANON_KEY!;
+const tableName = process.env.SUPABASE_TABLE!;
 
 const supabase = createClient(projectUrl, supabaseKey);
-
-const tableName = 'BATTLETAG_TABLE';
 
 const getData = async (userId: number) => supabase
   .from(tableName)

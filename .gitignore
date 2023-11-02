@@ -19,3 +19,6 @@ package-lock.json
 .flaskenv*
 !.env.project
 !.env.vault
+nodejs.zip
+/nodejs
+/dist
