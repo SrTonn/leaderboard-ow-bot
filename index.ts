@@ -45,7 +45,7 @@ Informações importantes;
 
 bot.use(async (ctx, next) => {
   const isMember = await checkIfIsMember(ctx)
-  if(!isMember) return;
+  if(!isMember) return ctx.reply("Eu interajo apenas com membros do grupo @overwatch2BR, caso realmente queira falar comigo, torne-se membro do grupo.")
 
   next()
 })
@@ -107,8 +107,10 @@ bot.command('remove', async (ctx, next) => {
   const battleTag = ctx.message.text.split(" ")[1];
 
   const {data, error} = await getData(userId);
-  console.log(error)
-  if((data?.length ?? 0) < 1) return ctx.reply("Você não tem conta registrada!");
+  if((data?.length ?? 0) < 1) {
+    console.error("Conta não encontrada:", error);
+    return ctx.reply("Você não tem conta registrada!");
+  }
 
   const isCorrectBattletag = data?.indexOf((obj: any) => obj.battle_tag === battleTag) !== -1;
   if(battleTag && isCorrectBattletag) {
@@ -136,6 +138,7 @@ bot.on(callbackQuery("data"), async ctx => {
 
   const battleTag = callbackData.split("_")[1]
 
+  // @ts-ignore
   const inline_keyboard = ctx.callbackQuery.message?.reply_markup?.inline_keyboard[0]!
   console.log(inline_keyboard)
 
@@ -143,7 +146,7 @@ bot.on(callbackQuery("data"), async ctx => {
     await remove(battleTag, fromUserId);
     ctx.answerCbQuery("Conta removida!")
     ctx.editMessageReplyMarkup({
-      inline_keyboard: [ inline_keyboard?.filter((obj) => obj.text !== battleTag) ]
+      inline_keyboard: [ inline_keyboard?.filter((obj: any) => obj.text !== battleTag) ]
     });
   } catch (error) {
     ctx.answerCbQuery("Ops")
